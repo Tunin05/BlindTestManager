@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>BlindTest V2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 40px; background: #f7faff; }
+    #timer { font-size: 3em; margin: 24px 0 10px 0; color: #007bff; }
+    #buzzer { font-size: 1.3em; margin: 10px 0 18px 0; color: #007bff; font-weight: bold; }
+    .controls { display: flex; justify-content: center; gap: 12px; margin: 18px 0 0 0; }
+    .controls button { font-size: 1.2em; padding: 10px 22px; border-radius: 8px; border: none; background: #007bff; color: white; cursor: pointer; transition: background 0.2s; }
+    .controls button:hover { background: #0056b3; }
+    #playlist-select { font-size: 1.1em; padding: 8px 18px; border-radius: 8px; border: 1px solid #007bff; margin-bottom: 18px; background: #fff; color: #007bff; }
+    #track { margin: 28px 0; font-size: 1.2em; }
+    #cover { width: 180px; height: 180px; object-fit: cover; border-radius: 16px; filter: blur(12px) brightness(0.7); margin-bottom: 18px; }
+    .revealed #cover { filter: none; }
+    .revealed .track-title, .revealed .track-artist { color: #222; }
+    .track-title { font-size: 2.1em; font-weight: bold; margin: 18px 0 8px 0; color: #007bff; }
+    .track-artist { font-size: 1.5em; font-weight: 600; margin-bottom: 10px; color: #0056b3; }
+    .hidden { display: none; }
+    #track audio { width: 340px; max-width: 90vw; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div id="timer">30</div>
+  <div id="buzzer">Personne n'a buzzé</div>
+  <select id="playlist-select">
+    <option value="">Choisir une playlist...</option>
+  </select>
+  <div id="track"></div>
+  <div class="controls">
+    <button id="playpause">Play</button>
+    <button id="reveal" class="hidden">Révéler</button>
+    <button id="next" class="hidden">Suivant</button>
+  </div>
+  <script type="module">
+    import themes from './themes.js';
+    let playlist = [];
+    let currentIndex = 0;
+    let revealed = false;
+    const socket = io();
+    const timerDiv = document.getElementById('timer');
+    const buzzerDiv = document.getElementById('buzzer');
+    const playlistSelect = document.getElementById('playlist-select');
+    const trackDiv = document.getElementById('track');
+    const playPauseBtn = document.getElementById('playpause');
+    const nextBtn = document.getElementById('next');
+    const revealBtn = document.getElementById('reveal');
+
+    // Remplit le menu déroulant
+    themes.forEach((theme, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = theme.name;
+      playlistSelect.appendChild(opt);
+    });
+    playlistSelect.onchange = function() {
+      if (playlistSelect.value !== '') loadPlaylist(themes[playlistSelect.value].url);
+    };
+
+    function loadPlaylist(url) {
+      playlist = [];
+      currentIndex = 0;
+      revealed = false;
+      trackDiv.innerHTML = 'Chargement...';
+      nextBtn.classList.add('hidden');
+      revealBtn.classList.add('hidden');
+      // JSONP Deezer
+      const cb = 'cb' + Math.floor(Math.random()*100000);
+      window[cb] = function(data) {
+        let tracks = data.tracks ? data.tracks.data : data.data;
+        playlist = tracks.filter(t => t.preview);
+        showTrack();
+      };
+      const script = document.createElement('script');
+      script.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb;
+      document.body.appendChild(script);
+    }
+    function updatePlayPauseBtn() {
+      const audio = document.getElementById('audio');
+      if (audio && !audio.paused) {
+        playPauseBtn.textContent = 'Pause';
+      } else {
+        playPauseBtn.textContent = 'Play';
+      }
+    }
+    function setAudioListeners() {
+      const audio = document.getElementById('audio');
+      if (!audio) return;
+      audio.onplay = function() { socket.emit('start'); updatePlayPauseBtn(); };
+      audio.onpause = function() { socket.emit('pause'); updatePlayPauseBtn(); };
+    }
+    function showTrack() {
+      if (!playlist.length) { trackDiv.innerHTML = 'Aucune piste.'; return; }
+      const track = playlist[currentIndex];
+      revealed = false;
+      trackDiv.className = '';
+      trackDiv.innerHTML = `
+        <div><img id="cover" src="${track.album.cover_medium}" alt="cover" /></div>
+        <div class="track-title">Titre : <b>???</b></div>
+        <div class="track-artist">Artiste : <b>???</b></div>
+        <audio id="audio" src="${track.preview}" controls></audio>
+      `;
+      nextBtn.classList.remove('hidden');
+      revealBtn.classList.remove('hidden');
+      revealBtn.disabled = false;
+      resetTimerLocal();
+      setTimeout(() => {
+        setAudioListeners();
+        updatePlayPauseBtn();
+        const audio = document.getElementById('audio');
+        if (audio) {
+          audio.play();
+          socket.emit('start');
+        }
+      }, 100);
+    }
+    function resetTimerLocal() {
+      socket.emit('reset');
+    }
+    nextBtn.onclick = function() {
+      if (currentIndex < playlist.length - 1) {
+        currentIndex++;
+        showTrack();
+      }
+    };
+    revealBtn.onclick = function() {
+      if (!playlist.length) return;
+      const track = playlist[currentIndex];
+      revealed = true;
+      trackDiv.className = 'revealed';
+      trackDiv.innerHTML = `
+        <div><img id="cover" src="${track.album.cover_medium}" alt="cover" /></div>
+        <div class="track-title">Titre : <b style='font-size:2.5em;'>${track.title}</b></div>
+        <div class="track-artist">Artiste : <b style='font-size:2em;'>${track.artist.name}</b></div>
+        <audio id="audio" src="${track.preview}" controls></audio>
+      `;
+      revealBtn.disabled = true;
+      setTimeout(() => { setAudioListeners(); updatePlayPauseBtn(); }, 100);
+    };
+    playPauseBtn.onclick = function() {
+      const audio = document.getElementById('audio');
+      if (audio) {
+        if (audio.paused) {
+          audio.play();
+          socket.emit('start');
+        } else {
+          audio.pause();
+          socket.emit('pause');
+        }
+      }
+    };
+    socket.on('timer', ({ timer, isPaused }) => {
+      timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
+    });
+    socket.on('buzzer', (name) => {
+      if (name) {
+        buzzerDiv.textContent = 'BUZZ : ' + name;
+        buzzerDiv.style.background = '#007bff';
+        buzzerDiv.style.color = 'white';
+        buzzerDiv.style.padding = '10px 0';
+        buzzerDiv.style.borderRadius = '8px';
+      } else {
+        buzzerDiv.textContent = "Personne n'a buzzé";
+        buzzerDiv.style.background = '';
+        buzzerDiv.style.color = '#007bff';
+        buzzerDiv.style.padding = '';
+        buzzerDiv.style.borderRadius = '';
+      }
+    });
+  </script>
+</body>
+</html> 
