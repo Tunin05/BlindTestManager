@@ -40,6 +40,7 @@
     let playlist = [];
     let currentIndex = 0;
     let revealed = false;
+    let waitingForFirstPlay = false;
     const socket = io();
     const timerDiv = document.getElementById('timer');
     const buzzerDiv = document.getElementById('buzzer');
@@ -64,15 +65,18 @@
       playlist = [];
       currentIndex = 0;
       revealed = false;
-      trackDiv.innerHTML = 'Chargement...';
+      waitingForFirstPlay = true;
+      trackDiv.innerHTML = "<b>Appuyez sur Play pour commencer</b>";
       nextBtn.classList.add('hidden');
       revealBtn.classList.add('hidden');
+      playPauseBtn.disabled = false;
       // JSONP Deezer
       const cb = 'cb' + Math.floor(Math.random()*100000);
       window[cb] = function(data) {
         let tracks = data.tracks ? data.tracks.data : data.data;
         playlist = tracks.filter(t => t.preview);
-        showTrack();
+        // N'affiche pas la pochette tout de suite, attend le Play
+        // trackDiv.innerHTML = '<b>Appuyez sur Play pour commencer</b>';
       };
       const script = document.createElement('script');
       script.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb;
@@ -110,11 +114,12 @@
       setTimeout(() => {
         setAudioListeners();
         updatePlayPauseBtn();
-        const audio = document.getElementById('audio');
-        if (audio) {
-          audio.play();
-          socket.emit('start');
-        }
+        // Ne pas démarrer automatiquement la lecture ici
+        // const audio = document.getElementById('audio');
+        // if (audio) {
+        //   audio.play();
+        //   socket.emit('start');
+        // }
       }, 100);
     }
     function resetTimerLocal() {
@@ -141,6 +146,17 @@
       setTimeout(() => { setAudioListeners(); updatePlayPauseBtn(); }, 100);
     };
     playPauseBtn.onclick = function() {
+      if (waitingForFirstPlay) {
+        // Affiche la pochette et le lecteur, puis démarre la lecture
+        showTrack();
+        const audio = document.getElementById('audio');
+        if (audio) {
+          audio.play();
+          socket.emit('start');
+        }
+        waitingForFirstPlay = false;
+        return;
+      }
       const audio = document.getElementById('audio');
       if (audio) {
         if (audio.paused) {
