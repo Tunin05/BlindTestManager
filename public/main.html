@@ -61,6 +61,13 @@
       if (playlistSelect.value !== '') loadPlaylist(themes[playlistSelect.value].url);
     };
 
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
     function loadPlaylist(url) {
       playlist = [];
       currentIndex = 0;
@@ -75,6 +82,7 @@
       window[cb] = function(data) {
         let tracks = data.tracks ? data.tracks.data : data.data;
         playlist = tracks.filter(t => t.preview);
+        shuffle(playlist);
         // N'affiche pas la pochette tout de suite, attend le Play
         // trackDiv.innerHTML = '<b>Appuyez sur Play pour commencer</b>';
       };
