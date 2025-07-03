@@ -49,7 +49,7 @@ io.on('connection', (socket) => {
 
   // Quand l'admin révèle la réponse
   socket.on('reveal', () => {
-    io.emit('buzzer', '');
+    io.emit('buzzer', 'revealed');
   });
 });
 

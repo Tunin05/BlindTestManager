@@ -15,11 +15,11 @@
   </style>
 </head>
 <body>
-  <h1>Buzzer</h1>
+  <h1>Buzzer <span style="font-size:1.2em;">🎉</span></h1>
   <div id="timer">30</div>
-  <input id="name" type="text" placeholder="Votre prénom" autocomplete="off" />
+  <input id="name" type="text" placeholder="Votre prénom (ou pseudo rigolo) 😎" autocomplete="off" />
   <br />
-  <button id="buzz">BUZZ !</button>
+  <button id="buzz"><span style="font-size:1.2em;">🚨</span> BUZZ ! <span style="font-size:1.2em;">🎵</span></button>
   <div id="msg"></div>
   <script>
     const socket = io();
@@ -30,18 +30,24 @@
     let locked = false;
     let hasBuzzed = false;
     let myName = '';
+    let lastTimer = 30;
     // Prépare le son de buzz
-    const buzzSound = new Audio('buzz.mp3');
+    const buzzSound = new Audio('buzz.wav');
+    // Message d'accueil fun
+    msgDiv.innerHTML = "<span style='color:#ff9800;'>Bienvenue sur le buzzer ! Prêt à dégainer plus vite que ton ombre ? 🤠</span>";
     socket.on('timer', ({ timer, isPaused }) => {
       timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
+      lastTimer = timer;
     });
     socket.on('buzzer', (name) => {
       if (name) {
         locked = true;
-        if (name === myName) {
-          msgDiv.textContent = 'Votre buzz a été pris en compte !';
+        if (name === 'revealed') {
+          msgDiv.innerHTML = "<span style='color:#9c27b0;'>🎤 Révélé ! Tout le monde connaît la vérité... ou presque ! 🤫</span>";
+        } else if (name === myName) {
+          msgDiv.innerHTML = "<span style='color:#4caf50;'>Bravo, tu as buzzé en premier ! 🏆</span>";
         } else {
-          msgDiv.textContent = 'Trop tard, buzzer verrouillé !';
+          msgDiv.innerHTML = "<span style='color:#f44336;'>Trop tard, buzzer verrouillé ! Quelqu'un a été plus rapide... 🐇</span>";
         }
         buzzBtn.disabled = true;
         nameInput.disabled = true;
@@ -51,9 +57,15 @@
       } else {
         locked = false;
         hasBuzzed = false;
-        msgDiv.textContent = '';
-        buzzBtn.disabled = false;
-        nameInput.disabled = false;
+        if (lastTimer === 0) {
+          msgDiv.innerHTML = "<span style='color:#ff9800;'>⏰ Temps écoulé ! Il fallait buzzer plus vite... 😅</span>";
+          buzzBtn.disabled = true;
+          nameInput.disabled = true;
+        } else {
+          msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
+          buzzBtn.disabled = false;
+          nameInput.disabled = false;
+        }
       }
     });
     buzzBtn.onclick = function() {
