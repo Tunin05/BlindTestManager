@@ -46,6 +46,11 @@ io.on('connection', (socket) => {
   socket.on('pause', () => {
     pauseTimer();
   });
+
+  // Quand l'admin révèle la réponse
+  socket.on('reveal', () => {
+    io.emit('buzzer', '');
+  });
 });
 
 function startTimer() {
@@ -60,6 +65,7 @@ function startTimer() {
       io.emit('timer', { timer, isPaused });
       if (timer === 0) {
         pauseTimer();
+        io.emit('buzzer', '');
       }
     }
   }, 1000);

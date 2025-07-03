@@ -50,6 +50,9 @@
     const nextBtn = document.getElementById('next');
     const revealBtn = document.getElementById('reveal');
 
+    // Prépare le son de buzz
+    const buzzSound = new Audio('buzz.mp3');
+
     // Remplit le menu déroulant
     themes.forEach((theme, i) => {
       const opt = document.createElement('option');
@@ -123,11 +126,11 @@
         setAudioListeners();
         updatePlayPauseBtn();
         // Ne pas démarrer automatiquement la lecture ici
-        // const audio = document.getElementById('audio');
-        // if (audio) {
-        //   audio.play();
-        //   socket.emit('start');
-        // }
+        const audio = document.getElementById('audio');
+        if (audio) {
+          audio.play();
+          socket.emit('start');
+       }
       }, 100);
     }
     function resetTimerLocal() {
@@ -143,15 +146,21 @@
       if (!playlist.length) return;
       const track = playlist[currentIndex];
       revealed = true;
+      // Mise à jour du DOM sans remplacer l'audio
       trackDiv.className = 'revealed';
-      trackDiv.innerHTML = `
-        <div><img id="cover" src="${track.album.cover_medium}" alt="cover" /></div>
-        <div class="track-title">Titre : <b style='font-size:2.5em;'>${track.title}</b></div>
-        <div class="track-artist">Artiste : <b style='font-size:2em;'>${track.artist.name}</b></div>
-        <audio id="audio" src="${track.preview}" controls></audio>
-      `;
+      // Met à jour le titre et l'artiste
+      const titleDiv = trackDiv.querySelector('.track-title b');
+      const artistDiv = trackDiv.querySelector('.track-artist b');
+      if (titleDiv) titleDiv.innerHTML = `<span style='font-size:2.5em;'>${track.title}</span>`;
+      if (artistDiv) artistDiv.innerHTML = `<span style='font-size:2em;'>${track.artist.name}</span>`;
+      // Retire le flou de la pochette
+      const cover = trackDiv.querySelector('#cover');
+      if (cover) cover.style.filter = '';
       revealBtn.disabled = true;
+      // Pas de remplacement de l'audio, donc la musique continue
       setTimeout(() => { setAudioListeners(); updatePlayPauseBtn(); }, 100);
+      // Bloque le buzzer côté serveur
+      socket.emit('reveal');
     };
     playPauseBtn.onclick = function() {
       if (waitingForFirstPlay) {
@@ -186,6 +195,14 @@
         buzzerDiv.style.color = 'white';
         buzzerDiv.style.padding = '10px 0';
         buzzerDiv.style.borderRadius = '8px';
+        // Joue le son de buzz
+        buzzSound.currentTime = 0;
+        buzzSound.play();
+        // Met en pause la musique
+        const audio = document.getElementById('audio');
+        if (audio && !audio.paused) {
+          audio.pause();
+        }
       } else {
         buzzerDiv.textContent = "Personne n'a buzzé";
         buzzerDiv.style.background = '';

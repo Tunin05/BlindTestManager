@@ -30,6 +30,8 @@
     let locked = false;
     let hasBuzzed = false;
     let myName = '';
+    // Prépare le son de buzz
+    const buzzSound = new Audio('buzz.mp3');
     socket.on('timer', ({ timer, isPaused }) => {
       timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
     });
@@ -43,6 +45,9 @@
         }
         buzzBtn.disabled = true;
         nameInput.disabled = true;
+        // Joue le son de buzz
+        buzzSound.currentTime = 0;
+        buzzSound.play();
       } else {
         locked = false;
         hasBuzzed = false;
