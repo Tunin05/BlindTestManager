@@ -1,0 +1,6 @@
+body { font-family: sans-serif; text-align: center; margin-top: 40px; }
+#timer { font-size: 3em; margin: 20px 0; }
+#msg { font-size: 1.5em; margin: 20px 0; color: #007bff; }
+input { font-size: 1.2em; padding: 8px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; }
+button { font-size: 2em; padding: 20px 40px; border-radius: 12px; border: none; background: #007bff; color: white; cursor: pointer; }
+button:disabled { background: #aaa; }

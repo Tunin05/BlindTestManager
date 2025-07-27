@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>BlindTest V2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="main-container">
+    <div id="timer-dvd">30</div>
+    <div id="buzzer">Personne n'a buzzé</div>
+    <div class="playlist-info" id="playlist-info"></div>
+    <select id="playlist-select">
+      <option value="">Choisir une playlist...</option>
+    </select>
+    <div id="track"></div>
+    <!-- Les contrôles sont réservés à l'admin -->
+  </div>
+  <script type="module">
+    let playlist = [];
+    let currentIndex = 0;
+    let currentTrack = null;
+    let revealed = false;
+    let themes = [];
+    let lastTimerValue;
+    const socket = io();
+    const timerDVD = document.getElementById('timer-dvd');
+    const buzzerDiv = document.getElementById('buzzer');
+    const playlistSelect = document.getElementById('playlist-select');
+    const playlistInfo = document.getElementById('playlist-info');
+    const trackDiv = document.getElementById('track');
+    // Les boutons sont désormais côté admin
+
+    // Prépare le son de buzz
+    const buzzSound = new Audio('/static/buzz.wav');
+  </script>
+  <script type="module" src="/static/js/main.js"></script>

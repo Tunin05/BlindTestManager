@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>BlindTest Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-title">Interface Admin BlindTest</div>
+    <form class="login-form" id="login-form">
+      <label for="admin-pwd">Mot de passe admin :</label>
+      <input type="password" id="admin-pwd" autocomplete="current-password" placeholder="Mot de passe..." required />
+      <button type="submit">Connexion</button>
+      <div class="error" id="login-error" style="display:none;"></div>
+    </form>
+    <div id="admin-panel" style="display:none;width:100%;">
+      <div style="margin-bottom:1em;text-align:center;" hidden>
+        <label for="playlist-select">Playlist :</label>
+        <select id="playlist-select"></select>
+      </div>
+      <div class="track-info">
+        <div class="track-title" id="track-title">Titre : <b>???</b></div>
+        <div class="track-artist" id="track-artist">Artiste : <b>???</b></div>
+        <div id="buzzed-player" style="margin:1em 0 0.5em 0;font-size:1.1em;color:#00bfae;font-weight:600;">Personne n'a buzzé</div>
+        <audio id="audio" src="" controls style="width:100%;margin-top:1em;display:none;"></audio>
+      </div>
+      <div class="controls">
+        <button id="playpause">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span>Play</span>
+        </button>
+        <button id="reveal">
+          <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/></svg>
+          <span>Révéler</span>
+        </button>
+        <button id="next">
+          <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm9-12h2v12h-2z"/></svg>
+          <span>Suivant</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/static/js/admin.js"></script>
+</body>
+</html>
