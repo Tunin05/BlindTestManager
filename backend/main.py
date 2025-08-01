@@ -29,7 +29,7 @@ async def serve_buzzer():
 # Redirection racine vers l'interface principale
 @fastapi_app.get("/")
 async def root():
-    return RedirectResponse(url="/main.html")
+    return RedirectResponse(url="/buzzer.html")
 
 # API: expose les playlists (lecture simple du JSON)
 @fastapi_app.get("/api/themes")
@@ -137,8 +137,10 @@ async def reset_timer():
 @sio.event
 async def select_playlist(sid, playlist_url):
     global current_playlist, current_playlist_url, current_index, is_playing, revealed
+    import random
     current_playlist_url = playlist_url
     current_playlist = fetch_deezer_tracks(playlist_url)
+    random.shuffle(current_playlist)
     current_index = 0
     is_playing = False
     revealed = False
