@@ -80,23 +80,29 @@ socket.on('isPlaying', (playing) => {
   updatePlayPauseBtn();
 });
 socket.on('music_control', (data) => {
+  // Synchronisation lecture/pause côté client
+  console.log('Contrôle audio reçu :', data);
   const audio = document.getElementById('audio');
   if (!audio) return;
   if (data.action === 'play') {
+    // Nouvelle piste : démarre à zéro
     if (currentTrack && currentTrack.preview) {
       audio.src = currentTrack.preview;
-      if (typeof data.position === 'number' && !isNaN(data.position)) {
-        audio.currentTime = data.position;
-      }
+      audio.currentTime = 0;
       audio.play().catch(()=>{});
     }
-  } else if (data.action === 'pause') {
-    if (typeof data.position === 'number' && !isNaN(data.position)) {
-      audio.currentTime = data.position;
+  } else if (data.action === 'resume') {
+    // Reprend la lecture sans changer la piste ni la position
+    if (audio.src) {
+      audio.play().catch(()=>{});
+      console.log('Reprise de la lecture audio');
     }
+  } else if (data.action === 'pause') {
     audio.pause();
+    console.log('Pause de la lecture audio');
   } else if (data.action === 'stop') {
     audio.pause();
+    console.log('Arrêt de la lecture audio');
     audio.currentTime = 0;
   }
 });

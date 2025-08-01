@@ -1,6 +1,3 @@
-
-
-
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,15 +6,9 @@ import asyncio
 import os
 from backend.playlist_loader import load_playlists
 
-
-
 # Initialisation FastAPI & Socket.IO
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 fastapi_app = FastAPI()
-
-
-
-
 
 # Fichiers statiques et HTML
 fastapi_app.mount("/static", StaticFiles(directory="frontend"), name="static")
@@ -35,29 +26,18 @@ async def serve_buzzer():
     return FileResponse(os.path.join(os.path.dirname(__file__), "../frontend/buzzer.html"))
 
 
-
-
-
 # Redirection racine vers l'interface principale
 @fastapi_app.get("/")
 async def root():
     return RedirectResponse(url="/main.html")
-
-
-
 
 # API: expose les playlists (lecture simple du JSON)
 @fastapi_app.get("/api/themes")
 async def get_themes():
     return JSONResponse(playlists)
 
-
-
 # Application ASGI combinée
 app = socketio.ASGIApp(sio, fastapi_app)
-
-
-
 
 
 # Variables d'état du timer/buzzer
@@ -166,59 +146,47 @@ async def select_playlist(sid, playlist_url):
 
 @sio.event
 async def play(sid, position=None):
-    global is_playing, is_paused, timer_task, music_position
+    global is_playing, is_paused, timer_task
     is_playing = True
     is_paused = False
-    # Si le frontend fournit une position, on la prend (sinon on garde la dernière connue)
-    if position is not None:
-        try:
-            music_position = float(position)
-        except Exception:
-            pass
     await sio.emit('isPlaying', is_playing)
-    await sio.emit('track', get_current_track())
-    await sio.emit('music_control', {'action': 'play', 'position': music_position})
+    # Reprend la lecture du média en cours (pas de reset à zéro)
+    await sio.emit('music_control', {'action': 'resume'})
     # Redémarre le timer si besoin
     if timer_task is None or timer_task.done():
         asyncio.create_task(start_timer())
 
 @sio.event
 async def pause(sid, position=None):
-    global is_playing, is_paused, music_position
+    global is_playing, is_paused
     is_playing = False
     is_paused = True
-    # On récupère la position courante de la musique si fournie
-    if position is not None:
-        try:
-            music_position = float(position)
-        except Exception:
-            pass
     await sio.emit('isPlaying', is_playing)
-    await sio.emit('music_control', {'action': 'pause', 'position': music_position})
+    await sio.emit('music_control', {'action': 'pause'})
     await pause_timer()
 
 @sio.event
 async def next(sid):
-    global current_index, revealed, is_playing, timer, buzzer_name, is_paused, music_position
+    global current_index, revealed, is_playing, timer, buzzer_name, is_paused
     if current_playlist:
         current_index = (current_index + 1) % len(current_playlist)
         revealed = False
-        is_playing = False
+        is_playing = True
         is_paused = False
         timer = 30
         buzzer_name = None
-        music_position = 0
         await sio.emit('track', get_current_track())
+        await reset()
+        await sio.emit('music_control', {'action': 'play'})
         await sio.emit('isPlaying', is_playing)
-        await sio.emit('music_control', {'action': 'stop'})
-        await reset_timer()
-        await sio.emit('buzzer', None)
+        await start_timer()
 
 @sio.event
 async def reveal(sid):
     global revealed
     revealed = True
     await sio.emit('revealed')
+    await sio.emit('music_control', {'action': 'play'})
 
 @sio.event
 async def admin_connected(sid):
@@ -249,32 +217,24 @@ async def send_current_state(to_sid=None):
 
 @sio.event
 async def buzz(sid, name, position=None):
-    global buzzer_name, is_paused, is_playing, music_position
+    global buzzer_name, is_paused, is_playing
     if not buzzer_name:
         buzzer_name = name
         is_paused = True
         is_playing = False
-        # On récupère la position courante de la musique si fournie
-        if position is not None:
-            try:
-                music_position = float(position)
-            except Exception:
-                pass
         await sio.emit('buzzer', buzzer_name)
         await sio.emit('isPlaying', is_playing)
-        await sio.emit('music_control', {'action': 'pause', 'position': music_position})
+        await sio.emit('music_control', {'action': 'pause'})
         await pause_timer()
 
 @sio.event
-async def reset(sid):
-    global timer, buzzer_name, is_paused, is_playing, music_position
+async def reset():
+    global timer, buzzer_name, is_paused, is_playing
     timer = 30
     buzzer_name = None
     is_paused = False
     is_playing = False
-    music_position = 0
     await sio.emit('buzzer', None)
-    await sio.emit('isPlaying', is_playing)
-    await sio.emit('music_control', {'action': 'stop'})
+    await sio.emit('unrevealed')  # Cache le titre, l'auteur et la jaquette
     await reset_timer()
 

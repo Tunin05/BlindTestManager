@@ -113,9 +113,11 @@ socket.on('track', (track) => {
 socket.on('revealed', () => {
   revealed = true;
   updateTrackDisplay();
+    console.log('Piste révélée, affichage mis à jour.');
 });
 socket.on('unrevealed', () => {
   revealed = false;
+  console.log('Piste non révélée, affichage mis à jour.');
   updateTrackDisplay();
 });
 
@@ -138,24 +140,5 @@ let isPlaying = false;
 socket.on('isPlaying', (playing) => {
   isPlaying = playing;
   updateTrackDisplay();
-});
-socket.on('music_control', (data) => {
-  // Si jamais on veut synchroniser l'audio côté public (optionnel)
-  const audio = document.getElementById('audio');
-  if (!audio) return;
-  if (data.action === 'play') {
-    if (currentTrack && currentTrack.preview) {
-      audio.src = currentTrack.preview;
-      if (typeof data.position === 'number' && !isNaN(data.position)) {
-        audio.currentTime = data.position;
-      }
-      audio.play().catch(()=>{});
-    }
-  } else if (data.action === 'pause') {
-    audio.pause();
-  } else if (data.action === 'stop') {
-    audio.pause();
-    audio.currentTime = 0;
-  }
 });
 // Les contrôles de navigation sont réservés à l'admin

@@ -39,6 +39,8 @@ def fetch_deezer_tracks(playlist_url):
                 'album': {'cover': t.get('album', {}).get('cover_medium', '')},
                 'preview': t.get('preview', '')
             })
+        import random
+        random.shuffle(result)  # On mélange les pistes pour la playlist
         return result
     except Exception as e:
         print(f"Erreur lors du chargement Deezer: {e}")

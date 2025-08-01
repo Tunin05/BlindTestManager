@@ -159,7 +159,7 @@
       letter-spacing: 0.02em;
     }
     #track {
-      width: 480px;
+      width: 80%;
       max-width: 95vw;
       min-height: 340px;
       margin: 0 auto 1em auto;
