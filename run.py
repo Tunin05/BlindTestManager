@@ -10,7 +10,7 @@ if __name__ == "__main__":
     print("🌐 Interface disponible sur: http://localhost:4000")
     print("🎮 Interface admin: http://localhost:4000/admin.html")
     print("🎯 Interface buzzer: http://localhost:4000/buzzer.html")
-    
+
     uvicorn.run(
         app,
         host="0.0.0.0",
