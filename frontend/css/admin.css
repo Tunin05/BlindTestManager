@@ -1,0 +1,146 @@
+body {
+  min-height: 100vh;
+  min-width: 100vw;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: linear-gradient(120deg, #e3e9ff 0%, #f7faff 50%, #f7eaff 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.admin-container {
+  width: 95vw;
+  max-width: 600px;
+  background: rgba(255,255,255,0.97);
+  border-radius: 32px;
+  box-shadow: 0 8px 48px #0002;
+  padding: 2em 2em 1.5em 2em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5em;
+}
+.admin-title {
+  font-size: 2.2em;
+  font-weight: 800;
+  color: #5a6cff;
+  margin-bottom: 0.2em;
+  text-align: center;
+}
+.track-info {
+  width: 100%;
+  max-width: 520px;
+  background: #f5f7ff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px #5a6cff11;
+  padding: 1.2em 1em 1em 1em;
+  margin-bottom: 0.5em;
+  text-align: center;
+}
+.track-title {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #5a6cff;
+  margin-bottom: 0.3em;
+  word-break: break-word;
+}
+.track-artist {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #7c4dff;
+  margin-bottom: 0.2em;
+  word-break: break-word;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 1.2em;
+}
+.controls button {
+  font-size: 1.2em;
+  padding: 12px 28px 12px 40px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(90deg, #5a6cff 60%, #7c4dff 100%);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  font-weight: 600;
+  box-shadow: 0 2px 16px #5a6cff33;
+  position: relative;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+.controls button:active {
+  transform: scale(0.97);
+}
+.controls button:disabled {
+  background: #bdbdbd;
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.controls button svg {
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.3em;
+  vertical-align: middle;
+  fill: currentColor;
+}
+.controls button#reveal {
+  background: linear-gradient(90deg, #ffb300 60%, #ff9800 100%);
+  color: #fff;
+}
+.controls button#next {
+  background: linear-gradient(90deg, #00bfae 60%, #00e676 100%);
+  color: #fff;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1em;
+  margin-top: 2em;
+}
+.login-form input[type="password"] {
+  font-size: 1.2em;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1.5px solid #5a6cff;
+  background: #fff;
+  color: #5a6cff;
+  font-weight: 600;
+  box-shadow: 0 2px 12px #5a6cff11;
+  outline: none;
+  transition: border 0.2s;
+}
+.login-form input[type="password"]:focus {
+  border: 2px solid #7c4dff;
+}
+.login-form button {
+  font-size: 1.1em;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background: #5a6cff;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 2px 12px #5a6cff22;
+  transition: background 0.2s;
+}
+.login-form button:active {
+  background: #7c4dff;
+}
+.error {
+  color: #f44336;
+  font-size: 1em;
+  margin-top: 0.5em;
+  text-align: center;
+}

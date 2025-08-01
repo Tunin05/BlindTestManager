@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Top Charts",
+    "id": "top-charts",
+    "url": "https://api.deezer.com/chart/0/tracks?limit=50&output=jsonp"
+  },
+  {
+    "name": "80's",
+    "id": "eighties",
+    "url": "https://api.deezer.com/playlist/1743878062?limit=50&output=jsonp"
+  },
+  {
+    "name": "French Classical",
+    "id": "french-classical",
+    "url": "https://api.deezer.com/playlist/700895155?limit=50&output=jsonp"
+  },
+  {
+    "name": "Internet memes",
+    "id": "internet-memes",
+    "url": "https://api.deezer.com/playlist/1074815531?limit=50&output=jsonp"
+  },
+  {
+    "name": "Rap",
+    "id": "rap",
+    "url": "https://api.deezer.com/playlist/1999435002?limit=50&output=jsonp"
+  },
+  {
+    "name": "Rock",
+    "id": "rock",
+    "url": "https://api.deezer.com/playlist/5989055904?limit=50&output=jsonp"
+  },
+  {
+    "name": "Classical",
+    "id": "classical",
+    "url": "https://api.deezer.com/playlist/6090624244?limit=50&output=jsonp"
+  },
+  {
+    "name": "Jazz",
+    "id": "jazz",
+    "url": "https://api.deezer.com/playlist/6102462764?limit=50&output=jsonp"
+  },
+  {
+    "name":"Kid",
+    "id":"kid",
+    "url":"https://api.deezer.com/playlist/2119615524?limit=50&output=jsonp"
+  }
+]
