@@ -36,6 +36,11 @@ async def root():
 async def get_themes():
     return JSONResponse(playlists)
 
+# API: expose les équipes et scores
+@fastapi_app.get("/api/teams")
+async def get_teams():
+    return JSONResponse(teams)
+
 # Application ASGI combinée
 app = socketio.ASGIApp(sio, fastapi_app)
 
@@ -44,8 +49,13 @@ app = socketio.ASGIApp(sio, fastapi_app)
 timer = 30
 timer_task = None
 buzzer_name = None
+buzzer_team = None
 is_paused = False
 music_position = 0  # position de la musique (en secondes)
+
+# Gestion des équipes et scores
+teams = {}  # {team_name: score}
+current_buzzer_player = None  # {name, team} du joueur qui a buzzé
 
 # Gestion de la playlist et lecture
 THEMES_PATH = os.path.join(os.path.dirname(__file__), '../frontend/themes.json')
@@ -169,7 +179,7 @@ async def pause(sid, position=None):
 
 @sio.event
 async def next(sid):
-    global current_index, revealed, is_playing, timer, buzzer_name, is_paused
+    global current_index, revealed, is_playing, timer, buzzer_name, buzzer_team, current_buzzer_player, is_paused
     if current_playlist:
         current_index = (current_index + 1) % len(current_playlist)
         revealed = False
@@ -177,6 +187,8 @@ async def next(sid):
         is_paused = False
         timer = 30
         buzzer_name = None
+        buzzer_team = None
+        current_buzzer_player = None
         await sio.emit('track', get_current_track())
         await reset()
         await sio.emit('music_control', {'action': 'play'})
@@ -218,25 +230,86 @@ async def send_current_state(to_sid=None):
             await sio.emit('unrevealed')
 
 @sio.event
-async def buzz(sid, name, position=None):
-    global buzzer_name, is_paused, is_playing
+async def buzz(sid, data):
+    global buzzer_name, buzzer_team, current_buzzer_player, is_paused, is_playing
     if not buzzer_name:
-        buzzer_name = name
+        player_name = data.get('name', '') if isinstance(data, dict) else data
+        player_team = data.get('team', '') if isinstance(data, dict) else ''
+        
+        buzzer_name = player_name
+        buzzer_team = player_team
+        current_buzzer_player = {'name': player_name, 'team': player_team}
         is_paused = True
         is_playing = False
-        await sio.emit('buzzer', buzzer_name)
+        
+        buzz_data = {'name': buzzer_name, 'team': buzzer_team}
+        await sio.emit('buzzer', buzz_data)
         await sio.emit('isPlaying', is_playing)
         await sio.emit('music_control', {'action': 'pause'})
         await pause_timer()
 
 @sio.event
 async def reset():
-    global timer, buzzer_name, is_paused, is_playing
+    global timer, buzzer_name, buzzer_team, current_buzzer_player, is_paused, is_playing
     timer = 30
     buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
     is_paused = False
     is_playing = False
     await sio.emit('buzzer', None)
     await sio.emit('unrevealed')  # Cache le titre, l'auteur et la jaquette
     await reset_timer()
+
+# --- GESTION DES ÉQUIPES ET SCORES ---
+@sio.event
+async def create_team(sid, team_name):
+    global teams
+    if team_name and team_name not in teams:
+        teams[team_name] = 0
+        await sio.emit('teams_updated', teams)
+
+@sio.event
+async def delete_team(sid, team_name):
+    global teams
+    if team_name in teams:
+        del teams[team_name]
+        await sio.emit('teams_updated', teams)
+
+@sio.event
+async def correct_answer(sid):
+    global current_buzzer_player, teams
+    if current_buzzer_player and current_buzzer_player['team'] in teams:
+        teams[current_buzzer_player['team']] += 1
+        await sio.emit('teams_updated', teams)
+        await sio.emit('answer_result', {'correct': True, 'player': current_buzzer_player})
+        # Passer automatiquement à la musique suivante
+        await next(sid)
+
+@sio.event
+async def incorrect_answer(sid):
+    global current_buzzer_player
+    if current_buzzer_player:
+        await sio.emit('answer_result', {'correct': False, 'player': current_buzzer_player})
+        # Reprendre la lecture pour permettre à d'autres de buzzer
+        await reset_buzzer_only()
+
+async def reset_buzzer_only():
+    """Reset uniquement le buzzer sans changer la musique"""
+    global buzzer_name, buzzer_team, current_buzzer_player, is_paused, is_playing
+    buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
+    is_paused = False
+    is_playing = True
+    await sio.emit('buzzer', None)
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'resume'})
+    # Reprendre le timer
+    if timer_task is None or timer_task.done():
+        asyncio.create_task(start_timer())
+
+@sio.event
+async def get_teams(sid):
+    await sio.emit('teams_updated', teams, to=sid)
 

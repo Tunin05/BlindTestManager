@@ -1,19 +1,51 @@
 const socket = io();
 const timerDiv = document.getElementById('timer');
 const nameInput = document.getElementById('name');
+const teamSelect = document.getElementById('team-select');
 const buzzBtn = document.getElementById('buzz');
 const msgDiv = document.getElementById('msg');
 let locked = false;
 let hasBuzzed = false;
 let myName = '';
+let myTeam = '';
 let lastTimer = 30;
+let teams = {};
 const buzzSound = new Audio('/static/buzz.wav');
-msgDiv.innerHTML = "<span style='color:#ff9800;'>Bienvenue sur le buzzer ! Prêt à dégainer plus vite que ton ombre ? 🤠</span>";
+msgDiv.innerHTML = "<span style='color:#ff9800;'>Bienvenue sur le buzzer ! Choisissez votre équipe et préparez-vous ! 🤠</span>";
+
+// Charger les équipes disponibles
+socket.emit('get_teams');
+
+socket.on('teams_updated', (updatedTeams) => {
+  teams = updatedTeams;
+  updateTeamSelect();
+});
+
+function updateTeamSelect() {
+  // Sauvegarder la sélection actuelle
+  const currentTeam = teamSelect.value;
+  
+  // Vider et reconstruire les options
+  teamSelect.innerHTML = '<option value="">Choisir une équipe...</option>';
+  
+  Object.keys(teams).forEach(teamName => {
+    const option = document.createElement('option');
+    option.value = teamName;
+    option.textContent = `${teamName} (${teams[teamName]} pts)`;
+    teamSelect.appendChild(option);
+  });
+  
+  // Restaurer la sélection si elle existe encore
+  if (currentTeam && teams[currentTeam] !== undefined) {
+    teamSelect.value = currentTeam;
+  }
+}
 socket.on('timer', ({ timer, isPaused }) => {
   timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
   lastTimer = timer;
 });
-socket.on('buzzer', (name) => {
+socket.on('buzzer', (data) => {
+  const name = data && data.name ? data.name : data;
   if (name) {
     locked = true;
     if (name === 'revealed') {
@@ -21,10 +53,12 @@ socket.on('buzzer', (name) => {
     } else if (name === myName) {
       msgDiv.innerHTML = "<span style='color:#4caf50;'>Bravo, tu as buzzé en premier ! 🏆</span>";
     } else {
-      msgDiv.innerHTML = "<span style='color:#f44336;'>Trop tard, buzzer verrouillé ! Quelqu'un a été plus rapide... 🐇</span>";
+      const teamText = data && data.team ? ` (${data.team})` : '';
+      msgDiv.innerHTML = `<span style='color:#f44336;'>Trop tard ! <b>${name}</b>${teamText} a été plus rapide... 🐇</span>`;
     }
     buzzBtn.disabled = true;
     nameInput.disabled = true;
+    teamSelect.disabled = true;
     buzzSound.currentTime = 0;
     buzzSound.play();
   } else {
@@ -34,20 +68,33 @@ socket.on('buzzer', (name) => {
       msgDiv.innerHTML = "<span style='color:#ff9800;'>⏰ Temps écoulé ! Il fallait buzzer plus vite... 😅</span>";
       buzzBtn.disabled = true;
       nameInput.disabled = true;
+      teamSelect.disabled = true;
     } else {
       msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
-      buzzBtn.disabled = false;
+      updateBuzzButton();
       nameInput.disabled = false;
+      teamSelect.disabled = false;
     }
   }
 });
 buzzBtn.onclick = function() {
   myName = nameInput.value.trim();
-  if (!myName || locked) return;
-  socket.emit('buzz', myName);
+  myTeam = teamSelect.value;
+  if (!myName || !myTeam || locked) return;
+  
+  socket.emit('buzz', {
+    name: myName,
+    team: myTeam
+  });
   hasBuzzed = true;
   buzzBtn.disabled = true;
 };
-nameInput.oninput = function() {
-  buzzBtn.disabled = !nameInput.value.trim() || locked || hasBuzzed;
-};
+
+function updateBuzzButton() {
+  const hasName = nameInput.value.trim();
+  const hasTeam = teamSelect.value;
+  buzzBtn.disabled = !hasName || !hasTeam || locked || hasBuzzed;
+}
+
+nameInput.oninput = updateBuzzButton;
+teamSelect.onchange = updateBuzzButton;

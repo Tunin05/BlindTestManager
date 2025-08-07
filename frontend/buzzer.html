@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Buzzer - BlindTest V2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/static/fav.ico">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link rel="stylesheet" href="/static/css/buzzer.css">
 </head>
@@ -11,6 +12,10 @@
   <h1>Buzzer <span style="font-size:1.2em;">🎉</span></h1>
   <div id="timer">30</div>
   <input id="name" type="text" placeholder="Votre prénom (ou pseudo rigolo) 😎" autocomplete="off" />
+  <br />
+  <select id="team-select" style="font-size:1.2em; padding:8px; border-radius:8px; border:1px solid #ccc; margin-bottom:16px; width:300px;">
+    <option value="">Choisir une équipe...</option>
+  </select>
   <br />
   <button id="buzz"><span style="font-size:1.2em;">🚨</span> BUZZ ! <span style="font-size:1.2em;">🎵</span></button>
   <div id="msg"></div>

@@ -4,20 +4,44 @@
   <meta charset="UTF-8">
   <title>BlindTest V2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/static/fav.ico">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
   <div class="main-container">
+    <br />
     <div id="timer-dvd">30</div>
     <div id="buzzer">Personne n'a buzzé</div>
+    
+    <!-- Affichage des scores des équipes -->
+    <div id="scoreboard" style="position:absolute;left:2vw;bottom:2vh;background:rgba(255,255,255,0.95);border-radius:16px;padding:1em;box-shadow:0 4px 24px rgba(90, 108, 255, 0.15);border:2px solid rgba(90, 108, 255, 0.1);min-width:200px;z-index:20;">
+      <h4 style="margin:0 0 0.5em 0;color:#5a6cff;text-align:center;">Scores</h4>
+      <div id="teams-scores"></div>
+    </div>
+    
     <div class="playlist-info" id="playlist-info"></div>
     <select id="playlist-select">
       <option value="">Choisir une playlist...</option>
     </select>
     <div id="track"></div>
     <!-- Les contrôles sont réservés à l'admin -->
+    
+    <!-- QR Code pour accéder au buzzer -->
+    <div id="qrcode-container">
+      <img id="qrcode" src="/static/qrcode_blind.acrevon.fr.png" alt="QR Code - Accéder au buzzer" title="Scannez pour accéder au buzzer">
+      <p id="qrcode-text">Scannez pour buzzer !</p>
+    </div>
+  </div>
+
+  <!-- QR Code en plein écran -->
+  <div id="qrcode-fullscreen">
+    <div id="qrcode-fullscreen-container">
+      <div id="qrcode-fullscreen-text">Scannez pour accéder au buzzer</div>
+      <img src="/static/qrcode_blind.acrevon.fr.png" alt="QR Code - Accéder au buzzer">
+      <div id="qrcode-fullscreen-close">Cliquez n'importe où pour fermer</div>
+    </div>
   </div>
   <script type="module">
     let playlist = [];
