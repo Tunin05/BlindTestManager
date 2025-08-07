@@ -203,14 +203,14 @@
       font-family: inherit;
     }
     .track-title {
-      font-size: 2.3em;
-      font-weight: 800;
+      font-size: 2.4em;
+      font-weight: 900;
       color: #5a6cff;
       letter-spacing: 0.01em;
     }
     .track-artist {
-      font-size: 1.5em;
-      font-weight: 600;
+      font-size: 1.8em;
+      font-weight: 800;
       color: #7c4dff;
     }
     .hidden { display: none; }
@@ -250,4 +250,134 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+
+    /* QR Code */
+    #qrcode-container {
+      position: absolute;
+      top: 2vh;
+      right: 2vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255,255,255,0.95);
+      border-radius: 16px;
+      padding: 1em;
+      box-shadow: 0 4px 24px rgba(90, 108, 255, 0.15);
+      border: 2px solid rgba(90, 108, 255, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+      z-index: 20;
+    }
+    #qrcode-container:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 32px rgba(90, 108, 255, 0.25);
+    }
+    #qrcode {
+      width: 160px;
+      height: 160px;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    #qrcode-text {
+      margin: 0.5em 0 0 0;
+      font-size: 1em;
+      font-weight: 600;
+      color: #5a6cff;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    /* QR Code en plein écran */
+    #qrcode-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      cursor: pointer;
+    }
+    #qrcode-fullscreen.active {
+      display: flex;
+    }
+    #qrcode-fullscreen-container {
+      background: white;
+      border-radius: 24px;
+      padding: 2em;
+      box-shadow: 0 8px 64px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1em;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    #qrcode-fullscreen img {
+      width: min(70vw, 70vh, 500px);
+      height: min(70vw, 70vh, 500px);
+      border-radius: 16px;
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.2);
+    }
+    #qrcode-fullscreen-text {
+      font-size: 1.5em;
+      font-weight: 700;
+      color: #5a6cff;
+      text-align: center;
+      margin-bottom: 0.5em;
+    }
+    #qrcode-fullscreen-close {
+      font-size: 1.1em;
+      color: #666;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    /* Responsive pour QR Code */
+    @media (max-width: 900px) {
+      #qrcode-container {
+        top: 1vh;
+        right: 1vw;
+        padding: 0.8em;
+      }
+      #qrcode {
+        width: 130px;
+        height: 130px;
+      }
+      #qrcode-text {
+        font-size: 0.9em;
+      }
+      #scoreboard {
+        left: 1vw;
+        bottom: 1vh;
+        min-width: 160px;
+        padding: 0.8em;
+      }
+    }
+    @media (max-width: 600px) {
+      #qrcode-container {
+        top: 0.5vh;
+        right: 0.5vw;
+        padding: 0.6em;
+      }
+      #qrcode {
+        width: 110px;
+        height: 110px;
+      }
+      #qrcode-text {
+        font-size: 0.85em;
+      }
+      #scoreboard {
+        left: 0.5vw;
+        bottom: 0.5vh;
+        min-width: 140px;
+        padding: 0.6em;
+      }
+      #scoreboard h4 {
+        font-size: 0.9em;
+      }
     }

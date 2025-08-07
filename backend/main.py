@@ -36,6 +36,11 @@ async def root():
 async def get_themes():
     return JSONResponse(playlists)
 
+# API: expose les équipes et scores
+@fastapi_app.get("/api/teams")
+async def get_teams():
+    return JSONResponse(teams)
+
 # Application ASGI combinée
 app = socketio.ASGIApp(sio, fastapi_app)
 
@@ -44,8 +49,13 @@ app = socketio.ASGIApp(sio, fastapi_app)
 timer = 30
 timer_task = None
 buzzer_name = None
+buzzer_team = None
 is_paused = False
 music_position = 0  # position de la musique (en secondes)
+
+# Gestion des équipes et scores
+teams = {}  # {team_name: score}
+current_buzzer_player = None  # {name, team} du joueur qui a buzzé
 
 # Gestion de la playlist et lecture
 THEMES_PATH = os.path.join(os.path.dirname(__file__), '../frontend/themes.json')
@@ -84,51 +94,62 @@ def fetch_deezer_tracks(playlist_url):
         return []
 
 
-# Timer asynchrone (uniquement pour le timer/buzzer)
+# Gestion du timer avec état cohérent
 async def start_timer():
-    global timer, timer_task, is_paused, buzzer_name
-    if timer_task is not None and not timer_task.done():
-        return
+    """Démarre un nouveau timer de 30 secondes"""
+    global timer, timer_task, is_paused
+    await stop_timer()  # S'assurer qu'aucun timer n'est en cours
+    
+    timer = 30
     is_paused = False
-    buzzer_name = None
-    await sio.emit('buzzer', None)
+    await sio.emit('timer', {'timer': timer, 'isPaused': is_paused})
+    
     async def timer_loop():
         global timer, is_paused
         while timer > 0 and not is_paused:
             await asyncio.sleep(1)
+            if is_paused:  # Double vérification
+                break
             timer -= 1
             await sio.emit('timer', {'timer': timer, 'isPaused': is_paused})
             if timer == 0:
-                await pause_timer()
-                await sio.emit('buzzer', '')
+                await handle_timer_expired()
+                break
+    
     timer_task = asyncio.create_task(timer_loop())
 
-
 async def pause_timer():
-    global is_paused, timer_task
+    """Met en pause le timer actuel"""
+    global is_paused
     is_paused = True
     await sio.emit('timer', {'timer': timer, 'isPaused': is_paused})
-    if timer_task is not None:
+    await stop_timer()
+
+async def stop_timer():
+    """Arrête complètement le timer"""
+    global timer_task
+    if timer_task and not timer_task.done():
         timer_task.cancel()
         try:
             await timer_task
-        except Exception:
+        except asyncio.CancelledError:
             pass
-        timer_task = None
-
+    timer_task = None
 
 async def reset_timer():
-    global timer, is_paused, timer_task
+    """Remet le timer à 30 sans le démarrer"""
+    global timer, is_paused
+    await stop_timer()
     timer = 30
     is_paused = False
     await sio.emit('timer', {'timer': timer, 'isPaused': is_paused})
-    if timer_task is not None:
-        timer_task.cancel()
-        try:
-            await timer_task
-        except Exception:
-            pass
-        timer_task = None
+
+async def handle_timer_expired():
+    """Gère l'expiration du timer"""
+    global is_playing
+    is_playing = False
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'pause'})
 
 
 
@@ -144,43 +165,66 @@ async def select_playlist(sid, playlist_url):
     current_index = 0
     is_playing = False
     revealed = False
+    await reset_timer()  # S'assurer que le timer est réinitialisé
     await send_current_state()
 
 @sio.event
 async def play(sid, position=None):
-    global is_playing, is_paused, timer_task
-    is_playing = True
-    is_paused = False
-    await sio.emit('isPlaying', is_playing)
-    # Reprend la lecture du média en cours (pas de reset à zéro)
-    await sio.emit('music_control', {'action': 'resume'})
-    # Redémarre le timer si besoin
-    if timer_task is None or timer_task.done():
-        asyncio.create_task(start_timer())
+    """Démarre la lecture de la piste courante"""
+    global is_playing
+    if current_playlist and get_current_track():
+        is_playing = True
+        await sio.emit('isPlaying', is_playing)
+        await sio.emit('music_control', {'action': 'play'})
+        # Démarrer le timer seulement si personne n'a buzzé
+        if not buzzer_name:
+            await start_timer()
 
 @sio.event
 async def pause(sid, position=None):
-    global is_playing, is_paused
+    """Met en pause la lecture"""
+    global is_playing
     is_playing = False
-    is_paused = True
     await sio.emit('isPlaying', is_playing)
     await sio.emit('music_control', {'action': 'pause'})
     await pause_timer()
 
 @sio.event
 async def next(sid):
-    global current_index, revealed, is_playing, timer, buzzer_name, is_paused
-    if current_playlist:
-        current_index = (current_index + 1) % len(current_playlist)
-        revealed = False
-        is_playing = True
-        is_paused = False
-        timer = 30
-        buzzer_name = None
-        await sio.emit('track', get_current_track())
-        await reset()
-        await sio.emit('music_control', {'action': 'play'})
+    """Passe à la piste suivante"""
+    global current_index, revealed, is_playing, buzzer_name, buzzer_team, current_buzzer_player
+    
+    if not current_playlist:
+        return
+    
+    # Passer à la piste suivante
+    current_index = (current_index + 1) % len(current_playlist)
+    
+    # Réinitialiser tous les états
+    revealed = False
+    is_playing = True
+    buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
+    
+    # Envoyer les nouvelles informations
+    track = get_current_track()
+    if track:
+        await sio.emit('track', track)
+        playlist_info = {
+            'current_index': current_index,
+            'total_tracks': len(current_playlist),
+            'remaining_tracks': len(current_playlist) - current_index - 1
+        }
+        await sio.emit('playlist_info', playlist_info)
+        
+        # Réinitialiser l'état de jeu
+        await sio.emit('buzzer', None)
+        await sio.emit('unrevealed')
         await sio.emit('isPlaying', is_playing)
+        await sio.emit('music_control', {'action': 'play'})
+        
+        # Démarrer le timer
         await start_timer()
 
 @sio.event
@@ -202,8 +246,15 @@ def get_current_track():
 async def send_current_state(to_sid=None):
     # Envoie l'état courant à tous ou à un client spécifique
     track = get_current_track()
+    playlist_info = {
+        'current_index': current_index,
+        'total_tracks': len(current_playlist),
+        'remaining_tracks': len(current_playlist) - current_index - 1 if current_playlist else 0
+    }
+    
     if to_sid:
         await sio.emit('track', track, to=to_sid)
+        await sio.emit('playlist_info', playlist_info, to=to_sid)
         await sio.emit('isPlaying', is_playing, to=to_sid)
         if revealed:
             await sio.emit('revealed', to=to_sid)
@@ -211,6 +262,7 @@ async def send_current_state(to_sid=None):
             await sio.emit('unrevealed', to=to_sid)
     else:
         await sio.emit('track', track)
+        await sio.emit('playlist_info', playlist_info)
         await sio.emit('isPlaying', is_playing)
         if revealed:
             await sio.emit('revealed')
@@ -218,25 +270,144 @@ async def send_current_state(to_sid=None):
             await sio.emit('unrevealed')
 
 @sio.event
-async def buzz(sid, name, position=None):
-    global buzzer_name, is_paused, is_playing
-    if not buzzer_name:
-        buzzer_name = name
-        is_paused = True
-        is_playing = False
-        await sio.emit('buzzer', buzzer_name)
-        await sio.emit('isPlaying', is_playing)
-        await sio.emit('music_control', {'action': 'pause'})
-        await pause_timer()
+async def buzz(sid, data):
+    """Gestion du buzzer"""
+    global buzzer_name, buzzer_team, current_buzzer_player, is_playing
+    
+    if buzzer_name:  # Quelqu'un a déjà buzzé
+        return
+    
+    # Premier à buzzer
+    player_name = data.get('name', '') if isinstance(data, dict) else str(data)
+    player_team = data.get('team', '') if isinstance(data, dict) else ''
+    
+    buzzer_name = player_name
+    buzzer_team = player_team
+    current_buzzer_player = {'name': player_name, 'team': player_team}
+    is_playing = False
+    
+    # Notifier tous les clients
+    buzz_data = {'name': buzzer_name, 'team': buzzer_team}
+    await sio.emit('buzzer', buzz_data)
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'pause'})
+    await pause_timer()
+
+@sio.event
+async def correct_answer(sid):
+    """Gestion d'une réponse correcte"""
+    global current_buzzer_player, teams, revealed, is_playing, buzzer_name, buzzer_team
+    
+    if not current_buzzer_player or current_buzzer_player['team'] not in teams:
+        return
+    
+    # Ajouter le point
+    teams[current_buzzer_player['team']] += 1
+    await sio.emit('teams_updated', teams)
+    await sio.emit('answer_result', {'correct': True, 'player': current_buzzer_player})
+    
+    # Révéler la musique et reprendre la lecture
+    revealed = True
+    is_playing = True
+    await sio.emit('revealed')
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'resume'})
+    
+    # Reset le buzzer pour la suite
+    buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
+    await sio.emit('buzzer', None)
+
+@sio.event
+async def incorrect_answer(sid):
+    """Gestion d'une réponse incorrecte"""
+    global current_buzzer_player, is_playing, buzzer_name, buzzer_team
+    
+    if not current_buzzer_player:
+        return
+    
+    await sio.emit('answer_result', {'correct': False, 'player': current_buzzer_player})
+    
+    # Reprendre la lecture sans révéler
+    is_playing = True
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'resume'})
+    
+    # Reset le buzzer pour permettre à d'autres de buzzer
+    buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
+    await sio.emit('buzzer', None)
+    
+    # Redémarrer le timer si la musique n'est pas révélée
+    if not revealed:
+        await start_timer()
 
 @sio.event
 async def reset():
-    global timer, buzzer_name, is_paused, is_playing
-    timer = 30
+    """Reset complet du jeu"""
+    global buzzer_name, buzzer_team, current_buzzer_player, is_playing, revealed
     buzzer_name = None
-    is_paused = False
+    buzzer_team = None
+    current_buzzer_player = None
     is_playing = False
+    revealed = False
+    
     await sio.emit('buzzer', None)
-    await sio.emit('unrevealed')  # Cache le titre, l'auteur et la jaquette
+    await sio.emit('unrevealed')
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'stop'})
     await reset_timer()
+
+# --- GESTION DES ÉQUIPES ET SCORES ---
+@sio.event
+async def create_team(sid, team_name):
+    """Créer une nouvelle équipe"""
+    global teams
+    if team_name and team_name.strip() and team_name not in teams:
+        teams[team_name.strip()] = 0
+        await sio.emit('teams_updated', teams)
+
+@sio.event
+async def delete_team(sid, team_name):
+    """Supprimer une équipe"""
+    global teams
+    if team_name in teams:
+        del teams[team_name]
+        await sio.emit('teams_updated', teams)
+
+@sio.event
+async def get_teams(sid):
+    """Récupérer la liste des équipes"""
+    await sio.emit('teams_updated', teams, to=sid)
+
+@sio.event
+async def select_playlist(sid, playlist_url):
+    """Sélectionner et charger une nouvelle playlist"""
+    global current_playlist, current_playlist_url, current_index, is_playing, revealed
+    import random
+    
+    current_playlist_url = playlist_url
+    current_playlist = fetch_deezer_tracks(playlist_url)
+    random.shuffle(current_playlist)
+    current_index = 0
+    is_playing = False
+    revealed = False
+    
+    await reset_timer()
+    await send_current_state()
+
+@sio.event
+async def reveal(sid):
+    """Révéler la piste courante"""
+    global revealed
+    revealed = True
+    await sio.emit('revealed')
+    await sio.emit('music_control', {'action': 'resume'})
+
+@sio.event
+async def admin_connected(sid):
+    """Envoyer l'état complet à un admin qui se connecte"""
+    await send_current_state(to_sid=sid)
 

@@ -12,10 +12,20 @@ const buzzerDiv = document.getElementById('buzzer');
 const playlistSelect = document.getElementById('playlist-select');
 const playlistInfo = document.getElementById('playlist-info');
 const trackDiv = document.getElementById('track');
+const teamsScoresDiv = document.getElementById('teams-scores');
+// Éléments pour l'affichage du progrès de la playlist
+const currentTrackNumSpan = document.getElementById('current-track-num');
+const totalTracksSpan = document.getElementById('total-tracks');
+const remainingTracksSpan = document.getElementById('remaining-tracks');
 // Les boutons sont désormais côté admin
 
 // Prépare le son de buzz
 const buzzSound = new Audio('/static/buzz.wav');
+
+let teams = {};
+
+// Charger les équipes au démarrage
+socket.emit('get_teams');
 
 // Charge dynamiquement les playlists depuis l'API backend
 fetch('/api/themes')
@@ -71,7 +81,9 @@ socket.on('timer', ({ timer, isPaused }) => {
     timerDVD.style.textShadow = '0 0 16px #f4433655, 0 0 4px #fff';
   }
 });
-socket.on('buzzer', (name) => {
+
+socket.on('buzzer', (data) => {
+  const name = data && data.name ? data.name : data;
   if (name === 'revealed') {
     buzzerDiv.innerHTML = '<span style="color:#7c4dff;">🎤 Révélé ! Tout le monde connaît la vérité... ou presque ! 🤫</span>';
     buzzerDiv.style.background = '#ede7f6';
@@ -80,7 +92,8 @@ socket.on('buzzer', (name) => {
     void buzzerDiv.offsetWidth;
     buzzerDiv.classList.add('buzzer-pop');
   } else if (name) {
-    buzzerDiv.innerHTML = '<span style="color:#00bfae;">🚨 BUZZ : <b>' + name + '</b> a dégainé plus vite que son ombre ! ⚡️</span>';
+    const teamText = data && data.team ? ` (${data.team})` : '';
+    buzzerDiv.innerHTML = `<span style="color:#00bfae;">🚨 BUZZ : <b>${name}</b>${teamText} a dégainé plus vite que son ombre ! ⚡️</span>`;
     buzzerDiv.style.background = '#b2fef7';
     buzzerDiv.style.color = '#00bfae';
     buzzerDiv.classList.remove('buzzer-pop');
@@ -100,6 +113,27 @@ socket.on('buzzer', (name) => {
   }
 });
 
+// Gestion des équipes et scores
+socket.on('teams_updated', (updatedTeams) => {
+  teams = updatedTeams;
+  updateScoreboard();
+});
+
+function updateScoreboard() {
+  if (Object.keys(teams).length === 0) {
+    teamsScoresDiv.innerHTML = '<div style="text-align:center;color:#666;font-style:italic;">Aucune équipe créée</div>';
+    return;
+  }
+  
+  const sortedTeams = Object.entries(teams).sort((a, b) => b[1] - a[1]);
+  teamsScoresDiv.innerHTML = sortedTeams.map(([teamName, score]) => 
+    `<div style="display:flex;justify-content:space-between;margin-bottom:0.3em;padding:0.2em 0;">
+      <span style="color:#5a6cff;font-weight:600;">${teamName}</span>
+      <span style="color:#7c4dff;font-weight:700;">${score}</span>
+    </div>`
+  ).join('');
+}
+
 // Affichage de la piste courante synchronisé par le backend
 socket.on('track', (track) => {
   if (!track) {
@@ -110,6 +144,13 @@ socket.on('track', (track) => {
   // revealed est synchronisé par les événements 'revealed'/'unrevealed'
   updateTrackDisplay();
 });
+
+socket.on('playlist_info', (info) => {
+  currentTrackNumSpan.textContent = info.current_index + 1;
+  totalTracksSpan.textContent = info.total_tracks;
+  remainingTracksSpan.textContent = info.remaining_tracks;
+});
+
 socket.on('revealed', () => {
   revealed = true;
   updateTrackDisplay();
@@ -141,4 +182,28 @@ socket.on('isPlaying', (playing) => {
   isPlaying = playing;
   updateTrackDisplay();
 });
+
+// Gestion du QR code en plein écran
+const qrcodeContainer = document.getElementById('qrcode-container');
+const qrcodeFullscreen = document.getElementById('qrcode-fullscreen');
+
+// Ouvrir le QR code en plein écran
+qrcodeContainer.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  qrcodeFullscreen.classList.add('active');
+  document.body.style.overflow = 'hidden'; // Empêche le scroll
+});
+
+// Fermer le QR code en plein écran
+qrcodeFullscreen.addEventListener('click', (e) => {
+  qrcodeFullscreen.classList.remove('active');
+  document.body.style.overflow = ''; // Restaure le scroll
+});
+
+// Empêcher la fermeture quand on clique sur le contenu du QR code
+document.getElementById('qrcode-fullscreen-container').addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
 // Les contrôles de navigation sont réservés à l'admin

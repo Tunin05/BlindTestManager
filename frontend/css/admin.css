@@ -144,3 +144,28 @@ body {
   margin-top: 0.5em;
   text-align: center;
 }
+
+/* Styles pour la gestion des équipes */
+.teams-section h3 {
+  margin: 0 0 1em 0;
+}
+
+#answer-buttons {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  margin: 1em 0;
+}
+
+#answer-buttons button {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#answer-buttons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+#answer-buttons button:active {
+  transform: translateY(0);
+}
