@@ -4,6 +4,7 @@ const nameInput = document.getElementById('name');
 const teamSelect = document.getElementById('team-select');
 const buzzBtn = document.getElementById('buzz');
 const msgDiv = document.getElementById('msg');
+const teamsScoresDiv = document.getElementById('teams-scores');
 let locked = false;
 let hasBuzzed = false;
 let myName = '';
@@ -19,7 +20,23 @@ socket.emit('get_teams');
 socket.on('teams_updated', (updatedTeams) => {
   teams = updatedTeams;
   updateTeamSelect();
+  updateScoresDisplay();
 });
+
+function updateScoresDisplay() {
+  if (Object.keys(teams).length === 0) {
+    teamsScoresDiv.innerHTML = '<div style="text-align:center;color:#666;font-style:italic;">Aucune équipe créée</div>';
+    return;
+  }
+  
+  const sortedTeams = Object.entries(teams).sort((a, b) => b[1] - a[1]);
+  teamsScoresDiv.innerHTML = sortedTeams.map(([teamName, score]) => 
+    `<div style="display:flex;justify-content:space-between;margin-bottom:0.3em;padding:0.2em 0;">
+      <span style="color:#5a6cff;font-weight:600;">${teamName}</span>
+      <span style="color:#7c4dff;font-weight:700;">${score} pts</span>
+    </div>`
+  ).join('');
+}
 
 function updateTeamSelect() {
   // Sauvegarder la sélection actuelle
@@ -28,16 +45,20 @@ function updateTeamSelect() {
   // Vider et reconstruire les options
   teamSelect.innerHTML = '<option value="">Choisir une équipe...</option>';
   
-  Object.keys(teams).forEach(teamName => {
+  // Trier les équipes par score décroissant pour l'affichage
+  const sortedTeams = Object.entries(teams).sort((a, b) => b[1] - a[1]);
+  
+  sortedTeams.forEach(([teamName, score]) => {
     const option = document.createElement('option');
     option.value = teamName;
-    option.textContent = `${teamName} (${teams[teamName]} pts)`;
+    option.textContent = `${teamName} (${score} pts)`;
     teamSelect.appendChild(option);
   });
   
   // Restaurer la sélection si elle existe encore
   if (currentTeam && teams[currentTeam] !== undefined) {
     teamSelect.value = currentTeam;
+    myTeam = currentTeam; // Mettre à jour la variable locale
   }
 }
 socket.on('timer', ({ timer, isPaused }) => {
@@ -96,5 +117,18 @@ function updateBuzzButton() {
   buzzBtn.disabled = !hasName || !hasTeam || locked || hasBuzzed;
 }
 
+// Mise à jour de l'équipe sélectionnée
+teamSelect.onchange = function() {
+  myTeam = teamSelect.value;
+  updateBuzzButton();
+};
+
+// Validation par Enter dans le champ nom
+nameInput.onkeypress = function(e) {
+  if (e.key === 'Enter' && !buzzBtn.disabled) {
+    buzzBtn.click();
+  }
+};
+
+// Mise à jour du bouton quand le nom change
 nameInput.oninput = updateBuzzButton;
-teamSelect.onchange = updateBuzzButton;

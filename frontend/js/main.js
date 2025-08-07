@@ -13,6 +13,10 @@ const playlistSelect = document.getElementById('playlist-select');
 const playlistInfo = document.getElementById('playlist-info');
 const trackDiv = document.getElementById('track');
 const teamsScoresDiv = document.getElementById('teams-scores');
+// Éléments pour l'affichage du progrès de la playlist
+const currentTrackNumSpan = document.getElementById('current-track-num');
+const totalTracksSpan = document.getElementById('total-tracks');
+const remainingTracksSpan = document.getElementById('remaining-tracks');
 // Les boutons sont désormais côté admin
 
 // Prépare le son de buzz
@@ -140,6 +144,13 @@ socket.on('track', (track) => {
   // revealed est synchronisé par les événements 'revealed'/'unrevealed'
   updateTrackDisplay();
 });
+
+socket.on('playlist_info', (info) => {
+  currentTrackNumSpan.textContent = info.current_index + 1;
+  totalTracksSpan.textContent = info.total_tracks;
+  remainingTracksSpan.textContent = info.remaining_tracks;
+});
+
 socket.on('revealed', () => {
   revealed = true;
   updateTrackDisplay();

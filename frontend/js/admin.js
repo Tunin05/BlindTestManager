@@ -13,6 +13,11 @@ const trackArtist = document.getElementById('track-artist');
 const buzzedPlayerDiv = document.getElementById('buzzed-player');
 const playlistSelect = document.getElementById('playlist-select');
 
+// Éléments pour l'affichage du progrès de la playlist
+const currentTrackNumSpan = document.getElementById('current-track-num');
+const totalTracksSpan = document.getElementById('total-tracks');
+const remainingTracksSpan = document.getElementById('remaining-tracks');
+
 // Éléments pour la gestion des équipes
 const teamNameInput = document.getElementById('team-name-input');
 const addTeamBtn = document.getElementById('add-team-btn');
@@ -111,36 +116,53 @@ socket.on('track', (track) => {
   revealed = false;
   updateTrackDisplay();
   if (revealBtn) revealBtn.disabled = false;
-  updateTrackDisplay();
 });
+
+socket.on('playlist_info', (info) => {
+  currentTrackNumSpan.textContent = info.current_index + 1;
+  totalTracksSpan.textContent = info.total_tracks;
+  remainingTracksSpan.textContent = info.remaining_tracks;
+});
+
 socket.on('isPlaying', (playing) => {
   isPlaying = playing;
   updatePlayPauseBtn();
 });
+
+function updatePlayPauseBtn() {
+  if (playPauseBtn) {
+    const span = playPauseBtn.querySelector('span');
+    if (isPlaying) {
+      span.textContent = 'Pause';
+    } else {
+      span.textContent = 'Play';
+    }
+  }
+}
+
 socket.on('music_control', (data) => {
-  // Synchronisation lecture/pause côté client
   console.log('Contrôle audio reçu :', data);
   const audio = document.getElementById('audio');
   if (!audio) return;
+  
   if (data.action === 'play') {
     // Nouvelle piste : démarre à zéro
     if (currentTrack && currentTrack.preview) {
-      audio.src = currentTrack.preview;
+      if (audio.src !== currentTrack.preview) {
+        audio.src = currentTrack.preview;
+      }
       audio.currentTime = 0;
-      audio.play().catch(()=>{});
+      audio.play().catch(err => console.log('Erreur lecture audio:', err));
     }
   } else if (data.action === 'resume') {
     // Reprend la lecture sans changer la piste ni la position
-    if (audio.src) {
-      audio.play().catch(()=>{});
-      console.log('Reprise de la lecture audio');
+    if (audio.src && currentTrack && currentTrack.preview) {
+      audio.play().catch(err => console.log('Erreur reprise audio:', err));
     }
   } else if (data.action === 'pause') {
     audio.pause();
-    console.log('Pause de la lecture audio');
   } else if (data.action === 'stop') {
     audio.pause();
-    console.log('Arrêt de la lecture audio');
     audio.currentTime = 0;
   }
 });
@@ -225,8 +247,10 @@ function updateTrackDisplay() {
     }
     return;
   }
+  
   trackTitle.innerHTML = `Titre : <b><span style='font-size:1.5em;'>${currentTrack.title}</span></b>`;
   trackArtist.innerHTML = `Artiste : <b><span style='font-size:1.2em;'>${currentTrack.artist.name}</span></b>`;
+  
   if (audio) {
     if (currentTrack.preview) {
       audio.src = currentTrack.preview;
@@ -235,14 +259,17 @@ function updateTrackDisplay() {
       audio.style.display = 'none';
       audio.src = '';
     }
+    
     if (isPlaying && currentTrack.preview) {
-      audio.play().catch(()=>{});
+      audio.play().catch(err => console.log('Erreur lecture audio:', err));
     } else {
       audio.pause();
     }
   }
 }
+
 function updatePlayPauseBtn() {
+  if (!playPauseBtn) return;
   const icon = playPauseBtn.querySelector('svg');
   const label = playPauseBtn.querySelector('span');
   if (isPlaying) {
@@ -253,13 +280,7 @@ function updatePlayPauseBtn() {
     label.textContent = 'Play';
   }
 }
+
 socket.on('connect', () => {
   if (isAdmin) socket.emit('admin_connected');
 });
-
-// Fonction globale pour supprimer une équipe (appelée depuis le HTML généré)
-window.deleteTeam = function(teamName) {
-  if (confirm(`Supprimer l'équipe "${teamName}" ?`)) {
-    socket.emit('delete_team', teamName);
-  }
-};
