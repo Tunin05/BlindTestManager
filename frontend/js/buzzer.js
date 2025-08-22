@@ -13,6 +13,7 @@ let lastTimer = 30;
 let teams = {};
 const buzzSound = new Audio('/static/buzz.wav');
 msgDiv.innerHTML = "<span style='color:#ff9800;'>Bienvenue sur le buzzer ! Choisissez votre équipe et préparez-vous ! 🤠</span>";
+let roundOver = false; // vrai quand le timer est à 0
 
 // Charger les équipes disponibles
 socket.emit('get_teams');
@@ -64,6 +65,20 @@ function updateTeamSelect() {
 socket.on('timer', ({ timer, isPaused }) => {
   timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
   lastTimer = timer;
+  roundOver = timer === 0;
+  if (roundOver) {
+    // Fin de manche: verrouille l'UI
+    msgDiv.innerHTML = "<span style='color:#ff9800;'>⏰ Temps écoulé ! Il fallait buzzer plus vite... 😅</span>";
+    buzzBtn.disabled = true;
+    nameInput.disabled = true;
+    teamSelect.disabled = true;
+  } else if (!locked) {
+    // Manche en cours et pas verrouillé: ouvrir
+    msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
+    nameInput.disabled = false;
+    teamSelect.disabled = false;
+    updateBuzzButton();
+  }
 });
 socket.on('buzzer', (data) => {
   const name = data && data.name ? data.name : data;
@@ -85,16 +100,12 @@ socket.on('buzzer', (data) => {
   } else {
     locked = false;
     hasBuzzed = false;
-    if (lastTimer === 0) {
-      msgDiv.innerHTML = "<span style='color:#ff9800;'>⏰ Temps écoulé ! Il fallait buzzer plus vite... 😅</span>";
-      buzzBtn.disabled = true;
-      nameInput.disabled = true;
-      teamSelect.disabled = true;
-    } else {
+    // L'état ouvert/fermé est désormais dicté par le timer: ne pas se baser sur lastTimer ici
+    if (!roundOver) {
       msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
-      updateBuzzButton();
       nameInput.disabled = false;
       teamSelect.disabled = false;
+      updateBuzzButton();
     }
   }
 });

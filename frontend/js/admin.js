@@ -23,7 +23,8 @@ const teamNameInput = document.getElementById('team-name-input');
 const addTeamBtn = document.getElementById('add-team-btn');
 const teamsList = document.getElementById('teams-list');
 const answerButtons = document.getElementById('answer-buttons');
-const correctBtn = document.getElementById('correct-btn');
+const correct1Btn = document.getElementById('correct1-btn');
+const correct2Btn = document.getElementById('correct2-btn');
 const incorrectBtn = document.getElementById('incorrect-btn');
 
 let teams = {};
@@ -83,10 +84,18 @@ teamNameInput.onkeypress = function(e) {
 };
 
 // Gestion des réponses
-correctBtn.onclick = function() {
-  socket.emit('correct_answer');
-  answerButtons.style.display = 'none';
-};
+if (correct1Btn) {
+  correct1Btn.onclick = function() {
+    socket.emit('award_points', 1);
+    answerButtons.style.display = 'none';
+  };
+}
+if (correct2Btn) {
+  correct2Btn.onclick = function() {
+    socket.emit('award_points', 2);
+    answerButtons.style.display = 'none';
+  };
+}
 
 incorrectBtn.onclick = function() {
   socket.emit('incorrect_answer');
@@ -165,6 +174,13 @@ socket.on('unrevealed', () => {
   updateTrackDisplay();
   revealBtn.disabled = false;
 });
+// Afficher le timer côté admin aussi pour debug (si un élément existe)
+socket.on('timer', ({ timer, isPaused }) => {
+  const timerDiv = document.getElementById('timer');
+  if (timerDiv) {
+    timerDiv.textContent = timer + (isPaused ? ' (pause)' : '');
+  }
+});
 
 const buzzSound = new Audio('/static/buzz.wav');
 socket.on('buzzer', (data) => {
@@ -190,8 +206,9 @@ socket.on('teams_updated', (updatedTeams) => {
 });
 
 socket.on('answer_result', (result) => {
-  const { correct, player } = result;
-  const resultText = correct ? 'Correct ! +1 point' : 'Incorrect !';
+  const { correct, player, points } = result;
+  const pts = Number.isFinite(points) ? points : (correct ? 1 : 0);
+  const resultText = correct ? `Correct ! +${pts} point${pts>1?'s':''}` : 'Incorrect !';
   const resultColor = correct ? '#4caf50' : '#f44336';
   
   // Afficher brièvement le résultat

@@ -89,7 +89,7 @@ def fetch_deezer_tracks(playlist_url):
                     'preview': t.get('preview', '')
                 })
         return result
-    except Exception as e:
+    except (requests.RequestException, ValueError) as e:
         print(f"Erreur lors du chargement Deezer: {e}")
         return []
 
@@ -105,7 +105,7 @@ async def start_timer():
     await sio.emit('timer', {'timer': timer, 'isPaused': is_paused})
     
     async def timer_loop():
-        global timer, is_paused
+        global timer
         while timer > 0 and not is_paused:
             await asyncio.sleep(1)
             if is_paused:  # Double vérification
@@ -150,13 +150,15 @@ async def handle_timer_expired():
     is_playing = False
     await sio.emit('isPlaying', is_playing)
     await sio.emit('music_control', {'action': 'pause'})
+    # Indiquer aux clients que le tour est terminé (désactive le buzzer côté clients)
+    await sio.emit('buzzer', None)
 
 
 
 
 # --- NOUVEAUX ÉVÉNEMENTS SOCKET.IO ---
 @sio.event
-async def select_playlist(sid, playlist_url):
+async def select_playlist(_sid, playlist_url):
     global current_playlist, current_playlist_url, current_index, is_playing, revealed
     import random
     current_playlist_url = playlist_url
@@ -167,9 +169,17 @@ async def select_playlist(sid, playlist_url):
     revealed = False
     await reset_timer()  # S'assurer que le timer est réinitialisé
     await send_current_state()
+    # Diffuser la première piste et les infos playlist immédiatement
+    track = get_current_track()
+    await sio.emit('track', track)
+    await sio.emit('playlist_info', {
+        'current_index': current_index,
+        'total_tracks': len(current_playlist),
+        'remaining_tracks': len(current_playlist) - current_index - 1 if current_playlist else 0
+    })
 
 @sio.event
-async def play(sid, position=None):
+async def play(_sid, _position=None):
     """Démarre la lecture de la piste courante"""
     global is_playing
     if current_playlist and get_current_track():
@@ -181,7 +191,7 @@ async def play(sid, position=None):
             await start_timer()
 
 @sio.event
-async def pause(sid, position=None):
+async def pause(_sid, _position=None):
     """Met en pause la lecture"""
     global is_playing
     is_playing = False
@@ -189,8 +199,8 @@ async def pause(sid, position=None):
     await sio.emit('music_control', {'action': 'pause'})
     await pause_timer()
 
-@sio.event
-async def next(sid):
+@sio.on('next')
+async def on_next(_sid):
     """Passe à la piste suivante"""
     global current_index, revealed, is_playing, buzzer_name, buzzer_team, current_buzzer_player
     
@@ -228,7 +238,7 @@ async def next(sid):
         await start_timer()
 
 @sio.event
-async def reveal(sid):
+async def reveal(_sid):
     global revealed
     revealed = True
     await sio.emit('revealed')
@@ -256,6 +266,12 @@ async def send_current_state(to_sid=None):
         await sio.emit('track', track, to=to_sid)
         await sio.emit('playlist_info', playlist_info, to=to_sid)
         await sio.emit('isPlaying', is_playing, to=to_sid)
+        # Synchroniser le timer et l'état du buzzer avec l'admin qui se (re)connecte
+        await sio.emit('timer', {'timer': timer, 'isPaused': is_paused}, to=to_sid)
+        if current_buzzer_player:
+            await sio.emit('buzzer', {'name': current_buzzer_player.get('name'), 'team': current_buzzer_player.get('team')}, to=to_sid)
+        else:
+            await sio.emit('buzzer', None, to=to_sid)
         if revealed:
             await sio.emit('revealed', to=to_sid)
         else:
@@ -270,7 +286,7 @@ async def send_current_state(to_sid=None):
             await sio.emit('unrevealed')
 
 @sio.event
-async def buzz(sid, data):
+async def buzz(_sid, data):
     """Gestion du buzzer"""
     global buzzer_name, buzzer_team, current_buzzer_player, is_playing
     
@@ -296,38 +312,18 @@ async def buzz(sid, data):
 @sio.event
 async def correct_answer(sid):
     """Gestion d'une réponse correcte"""
-    global current_buzzer_player, teams, revealed, is_playing, buzzer_name, buzzer_team
-    
-    if not current_buzzer_player or current_buzzer_player['team'] not in teams:
-        return
-    
-    # Ajouter le point
-    teams[current_buzzer_player['team']] += 1
-    await sio.emit('teams_updated', teams)
-    await sio.emit('answer_result', {'correct': True, 'player': current_buzzer_player})
-    
-    # Révéler la musique et reprendre la lecture
-    revealed = True
-    is_playing = True
-    await sio.emit('revealed')
-    await sio.emit('isPlaying', is_playing)
-    await sio.emit('music_control', {'action': 'resume'})
-    
-    # Reset le buzzer pour la suite
-    buzzer_name = None
-    buzzer_team = None
-    current_buzzer_player = None
-    await sio.emit('buzzer', None)
+    # Compatibilité: traite comme un award de 1 point
+    await award_points(sid, 1)
 
 @sio.event
-async def incorrect_answer(sid):
+async def incorrect_answer(_sid):
     """Gestion d'une réponse incorrecte"""
     global current_buzzer_player, is_playing, buzzer_name, buzzer_team
     
     if not current_buzzer_player:
         return
     
-    await sio.emit('answer_result', {'correct': False, 'player': current_buzzer_player})
+    await sio.emit('answer_result', {'correct': False, 'points': 0, 'player': current_buzzer_player})
     
     # Reprendre la lecture sans révéler
     is_playing = True
@@ -345,7 +341,7 @@ async def incorrect_answer(sid):
         await start_timer()
 
 @sio.event
-async def reset():
+async def reset(_sid=None):
     """Reset complet du jeu"""
     global buzzer_name, buzzer_team, current_buzzer_player, is_playing, revealed
     buzzer_name = None
@@ -353,32 +349,73 @@ async def reset():
     current_buzzer_player = None
     is_playing = False
     revealed = False
-    
-    await sio.emit('buzzer', None)
+
+    # Éviter une condition de course côté clients: envoyer d'abord l'état du timer
+    await reset_timer()
     await sio.emit('unrevealed')
     await sio.emit('isPlaying', is_playing)
     await sio.emit('music_control', {'action': 'stop'})
-    await reset_timer()
+    await sio.emit('buzzer', None)
+
+@sio.event
+async def award_points(_sid, points: int):
+    """Attribue un nombre de points (1 ou 2) à l'équipe du joueur qui a buzzé, puis révèle et reprend la lecture."""
+    global current_buzzer_player, revealed, is_playing, buzzer_name, buzzer_team
+
+    if not current_buzzer_player:
+        return
+    team = current_buzzer_player.get('team')
+    if team not in teams:
+        return
+
+    # Sanitize points
+    try:
+        pts = int(points)
+    except (TypeError, ValueError):
+        pts = 1
+    if pts < 1:
+        pts = 1
+    if pts > 2:
+        pts = 2
+
+    # Ajouter les points
+    teams[team] += pts
+    await sio.emit('teams_updated', teams)
+    await sio.emit('answer_result', {
+        'correct': True,
+        'points': pts,
+        'player': current_buzzer_player
+    })
+
+    # Révéler la musique et reprendre la lecture
+    revealed = True
+    is_playing = True
+    await sio.emit('revealed')
+    await sio.emit('isPlaying', is_playing)
+    await sio.emit('music_control', {'action': 'resume'})
+
+    # Reset le buzzer pour la suite
+    buzzer_name = None
+    buzzer_team = None
+    current_buzzer_player = None
+    await sio.emit('buzzer', None)
 
 # --- GESTION DES ÉQUIPES ET SCORES ---
 @sio.event
-async def create_team(sid, team_name):
+async def create_team(_sid, team_name):
     """Créer une nouvelle équipe"""
-    global teams
     if team_name and team_name.strip() and team_name not in teams:
         teams[team_name.strip()] = 0
         await sio.emit('teams_updated', teams)
 
 @sio.event
-async def delete_team(sid, team_name):
+async def delete_team(_sid, team_name):
     """Supprimer une équipe"""
-    global teams
     if team_name in teams:
         del teams[team_name]
         await sio.emit('teams_updated', teams)
 
-@sio.event
-async def get_teams(sid):
-    """Récupérer la liste des équipes"""
-    global teams
+@sio.on('get_teams')
+async def get_teams_event(_sid):
+    """Récupérer la liste des équipes (événement Socket.IO)"""
     await sio.emit('teams_updated', teams)
