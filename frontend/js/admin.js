@@ -129,17 +129,6 @@ socket.on('isPlaying', (playing) => {
   updatePlayPauseBtn();
 });
 
-function updatePlayPauseBtn() {
-  if (playPauseBtn) {
-    const span = playPauseBtn.querySelector('span');
-    if (isPlaying) {
-      span.textContent = 'Pause';
-    } else {
-      span.textContent = 'Play';
-    }
-  }
-}
-
 socket.on('music_control', (data) => {
   console.log('Contrôle audio reçu :', data);
   const audio = document.getElementById('audio');

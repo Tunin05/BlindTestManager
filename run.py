@@ -7,7 +7,7 @@ from backend.main import app
 
 if __name__ == "__main__":
     print("🎵 Démarrage du serveur BlindTestManager...")
-    print("🌐 Interface disponible sur: http://localhost:4000")
+    print("🌐 Interface disponible sur: http://localhost:4000/main.html")
     print("🎮 Interface admin: http://localhost:4000/admin.html")
     print("🎯 Interface buzzer: http://localhost:4000/buzzer.html")
 

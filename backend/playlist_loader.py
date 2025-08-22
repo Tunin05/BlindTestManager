@@ -41,6 +41,8 @@ def fetch_deezer_tracks(playlist_url):
             })
         import random
         random.shuffle(result)  # On mélange les pistes pour la playlist
+        if len(result) > 50:
+            result = result[:50]
         return result
     except Exception as e:
         print(f"Erreur lors du chargement Deezer: {e}")

@@ -1,5 +1,10 @@
 [
   {
+    "name": "Mix",
+    "id": "mix",
+    "url": "https://api.deezer.com/playlist/10792003862?limit=500&output=jsonp"
+  },
+  {
     "name": "Top Charts",
     "id": "top-charts",
     "url": "https://api.deezer.com/chart/0/tracks?limit=50&output=jsonp"

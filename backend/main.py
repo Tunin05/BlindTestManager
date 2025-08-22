@@ -380,34 +380,5 @@ async def delete_team(sid, team_name):
 @sio.event
 async def get_teams(sid):
     """Récupérer la liste des équipes"""
-    await sio.emit('teams_updated', teams, to=sid)
-
-@sio.event
-async def select_playlist(sid, playlist_url):
-    """Sélectionner et charger une nouvelle playlist"""
-    global current_playlist, current_playlist_url, current_index, is_playing, revealed
-    import random
-    
-    current_playlist_url = playlist_url
-    current_playlist = fetch_deezer_tracks(playlist_url)
-    random.shuffle(current_playlist)
-    current_index = 0
-    is_playing = False
-    revealed = False
-    
-    await reset_timer()
-    await send_current_state()
-
-@sio.event
-async def reveal(sid):
-    """Révéler la piste courante"""
-    global revealed
-    revealed = True
-    await sio.emit('revealed')
-    await sio.emit('music_control', {'action': 'resume'})
-
-@sio.event
-async def admin_connected(sid):
-    """Envoyer l'état complet à un admin qui se connecte"""
-    await send_current_state(to_sid=sid)
-
+    global teams
+    await sio.emit('teams_updated', teams)

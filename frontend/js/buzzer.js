@@ -132,3 +132,8 @@ nameInput.onkeypress = function(e) {
 
 // Mise à jour du bouton quand le nom change
 nameInput.oninput = updateBuzzButton;
+
+// Mise à jour des équipes lors de la connexion
+socket.on('connect', () => {
+  socket.emit('get_teams');
+});
