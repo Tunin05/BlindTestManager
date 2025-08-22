@@ -288,6 +288,52 @@
       letter-spacing: 0.02em;
     }
 
+    /* Scoreboard - plus haut et plus grand */
+    #scoreboard {
+      position: absolute;
+      left: 2vw;
+      top: 20vh; /* était bottom:2vh -> remonté en haut */
+      background: rgba(255,255,255,0.95);
+      border-radius: 16px;
+      padding: 1.2em 1.2em 1em 1.2em;
+      box-shadow: 0 4px 24px rgba(90, 108, 255, 0.15);
+      border: 2px solid rgba(90, 108, 255, 0.1);
+      min-width: 260px; /* plus large */
+      z-index: 20;
+    }
+    #scoreboard h4 {
+      margin: 0 0 0.5em 0;
+      color: #5a6cff;
+      text-align: center;
+      font-size: 1.4em; /* agrandi */
+      font-weight: 800;
+    }
+    #teams-scores {
+      min-width: 220px;
+    }
+    #teams-scores .score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1em;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e5e8ff;
+      box-shadow: 0 1px 6px rgba(90,108,255,0.08);
+    }
+    #teams-scores .team-name {
+      color: #5a6cff;
+      font-weight: 700;
+      font-size: 1.05em;
+    }
+    #teams-scores .team-score {
+      color: #7c4dff;
+      font-weight: 800;
+      font-size: 1.15em;
+    }
+
     /* QR Code en plein écran */
     #qrcode-fullscreen {
       position: fixed;
@@ -351,12 +397,7 @@
       #qrcode-text {
         font-size: 0.9em;
       }
-      #scoreboard {
-        left: 1vw;
-        bottom: 1vh;
-        min-width: 160px;
-        padding: 0.8em;
-      }
+  #scoreboard { left: 1vw; top: 9vh; min-width: 180px; padding: 0.9em; }
     }
     @media (max-width: 600px) {
       #qrcode-container {
@@ -371,13 +412,6 @@
       #qrcode-text {
         font-size: 0.85em;
       }
-      #scoreboard {
-        left: 0.5vw;
-        bottom: 0.5vh;
-        min-width: 140px;
-        padding: 0.6em;
-      }
-      #scoreboard h4 {
-        font-size: 0.9em;
-      }
+  #scoreboard { left: 0.5vw; top: 8vh; min-width: 150px; padding: 0.7em; }
+  #scoreboard h4 { font-size: 1.05em; }
     }

@@ -4,3 +4,43 @@ body { font-family: sans-serif; text-align: center; margin-top: 40px; }
 input, select { font-size: 1.2em; padding: 8px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; }
 button { font-size: 2em; padding: 20px 40px; border-radius: 12px; border: none; background: #007bff; color: white; cursor: pointer; }
 button:disabled { background: #aaa; }
+
+/* Scores section - plus haut et agrandi */
+#scores-section {
+	margin: 10px auto 20px auto;
+	padding: 16px 20px;
+	background: #f5f7ff;
+	border-radius: 12px;
+	border: 2px solid #5a6cff10;
+	max-width: 520px;
+	width: calc(100% - 32px);
+}
+#scores-section h3 {
+	margin: 0 0 12px 0;
+	color: #5a6cff;
+	font-size: 1.6em;
+	text-align: center;
+}
+#teams-scores {
+	text-align: left;
+}
+#teams-scores .score-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 6px;
+	margin-bottom: 6px;
+	background: white;
+	border-radius: 8px;
+	border: 1px solid #e5e8ff;
+}
+#teams-scores .score-row .team-name {
+	color: #5a6cff;
+	font-weight: 700;
+	font-size: 1.1em;
+}
+#teams-scores .score-row .team-score {
+	color: #7c4dff;
+	font-weight: 800;
+	font-size: 1.2em;
+}

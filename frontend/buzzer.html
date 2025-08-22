@@ -12,7 +12,11 @@
   <h1>Buzzer <span style="font-size:1.2em;">🎉</span></h1>
   <div id="timer">30</div>
   
-
+  <!-- Scores: déplacé plus haut et stylé via CSS -->
+  <section id="scores-section">
+    <h3>Scores</h3>
+    <div id="teams-scores"></div>
+  </section>
   
   <input id="name" type="text" placeholder="Votre prénom (ou pseudo rigolo) 😎" autocomplete="off" />
   <br />
@@ -22,11 +26,6 @@
   <br />
   <button id="buzz"><span style="font-size:1.2em;">🚨</span> BUZZ ! <span style="font-size:1.2em;">🎵</span></button>
   <div id="msg"></div> 
-  <!-- Affichage des scores des équipes -->
-  <div id="scores-section" style="margin:1em 0;padding:1em;background:#f5f5f5;border-radius:8px;max-width:400px;margin-left:auto;margin-right:auto;">
-    <h3 style="margin:0 0 0.5em 0;color:#5a6cff;text-align:center;">Scores</h3>
-    <div id="teams-scores"></div>
-  </div>
   <script type="module" src="/static/js/buzzer.js"></script>
 </body>
 </html> 

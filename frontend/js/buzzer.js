@@ -32,9 +32,9 @@ function updateScoresDisplay() {
   
   const sortedTeams = Object.entries(teams).sort((a, b) => b[1] - a[1]);
   teamsScoresDiv.innerHTML = sortedTeams.map(([teamName, score]) => 
-    `<div style="display:flex;justify-content:space-between;margin-bottom:0.3em;padding:0.2em 0;">
-      <span style="color:#5a6cff;font-weight:600;">${teamName}</span>
-      <span style="color:#7c4dff;font-weight:700;">${score} pts</span>
+    `<div class="score-row">
+      <span class="team-name">${teamName}</span>
+      <span class="team-score">${score} pts</span>
     </div>`
   ).join('');
 }
