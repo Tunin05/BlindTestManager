@@ -15,6 +15,29 @@ const buzzSound = new Audio('/static/buzz.wav');
 msgDiv.innerHTML = "<span style='color:#ff9800;'>Bienvenue sur le buzzer ! Choisissez votre équipe et préparez-vous ! 🤠</span>";
 let roundOver = false; // vrai quand le timer est à 0
 
+// --- Persistence helpers (localStorage) ---
+function savePrefs() {
+  try {
+    localStorage.setItem('bt_name', nameInput.value.trim());
+    localStorage.setItem('bt_team', teamSelect.value || '');
+  } catch {}
+}
+function getStoredName() {
+  try { return localStorage.getItem('bt_name') || ''; } catch { return ''; }
+}
+function getStoredTeam() {
+  try { return localStorage.getItem('bt_team') || ''; } catch { return ''; }
+}
+
+// Prefill from storage
+(() => {
+  const storedName = getStoredName();
+  if (storedName) {
+    nameInput.value = storedName;
+    myName = storedName;
+  }
+})();
+
 // Charger les équipes disponibles
 socket.emit('get_teams');
 
@@ -60,6 +83,13 @@ function updateTeamSelect() {
   if (currentTeam && teams[currentTeam] !== undefined) {
     teamSelect.value = currentTeam;
     myTeam = currentTeam; // Mettre à jour la variable locale
+  } else {
+    // Sinon, essayer depuis le stockage
+    const storedTeam = getStoredTeam();
+    if (storedTeam && teams[storedTeam] !== undefined) {
+      teamSelect.value = storedTeam;
+      myTeam = storedTeam;
+    }
   }
 }
 socket.on('timer', ({ timer, isPaused }) => {
@@ -77,6 +107,8 @@ socket.on('timer', ({ timer, isPaused }) => {
     msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
     nameInput.disabled = false;
     teamSelect.disabled = false;
+  nameInput.style.borderColor = '';
+  teamSelect.style.borderColor = '';
     updateBuzzButton();
   }
 });
@@ -105,6 +137,8 @@ socket.on('buzzer', (data) => {
       msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
       nameInput.disabled = false;
       teamSelect.disabled = false;
+  nameInput.style.borderColor = '';
+  teamSelect.style.borderColor = '';
       updateBuzzButton();
     }
   }
@@ -112,7 +146,23 @@ socket.on('buzzer', (data) => {
 buzzBtn.onclick = function() {
   myName = nameInput.value.trim();
   myTeam = teamSelect.value;
-  if (!myName || !myTeam || locked) return;
+  if (locked) return;
+  if (!myName && !myTeam) {
+    msgDiv.innerHTML = "<span style='color:#f44336;'>Veuillez saisir un prénom et choisir une équipe avant de buzzer.</span>";
+    nameInput.style.borderColor = '#f44336';
+    teamSelect.style.borderColor = '#f44336';
+    return;
+  }
+  if (!myName) {
+    msgDiv.innerHTML = "<span style='color:#f44336;'>Veuillez saisir un prénom avant de buzzer.</span>";
+    nameInput.style.borderColor = '#f44336';
+    return;
+  }
+  if (!myTeam) {
+    msgDiv.innerHTML = "<span style='color:#f44336;'>Veuillez choisir une équipe avant de buzzer.</span>";
+    teamSelect.style.borderColor = '#f44336';
+    return;
+  }
   
   socket.emit('buzz', {
     name: myName,
@@ -120,17 +170,34 @@ buzzBtn.onclick = function() {
   });
   hasBuzzed = true;
   buzzBtn.disabled = true;
+  // Save after a valid buzz attempt
+  savePrefs();
 };
 
 function updateBuzzButton() {
   const hasName = nameInput.value.trim();
   const hasTeam = teamSelect.value;
   buzzBtn.disabled = !hasName || !hasTeam || locked || hasBuzzed;
+  // Live validation message when open
+  if (!locked && !roundOver) {
+    if (!hasName && !hasTeam) {
+      msgDiv.innerHTML = "<span style='color:#f44336;'>Saisis ton prénom et choisis une équipe pour pouvoir buzzer.</span>";
+    } else if (!hasName) {
+      msgDiv.innerHTML = "<span style='color:#f44336;'>Saisis ton prénom pour pouvoir buzzer.</span>";
+    } else if (!hasTeam) {
+      msgDiv.innerHTML = "<span style='color:#f44336;'>Choisis une équipe pour pouvoir buzzer.</span>";
+    } else {
+      msgDiv.innerHTML = "<span style='color:#2196f3;'>Le buzzer est ouvert, tente ta chance ! ✋</span>";
+    }
+  }
 }
 
 // Mise à jour de l'équipe sélectionnée
 teamSelect.onchange = function() {
   myTeam = teamSelect.value;
+  // Clear potential error style and save
+  teamSelect.style.borderColor = '';
+  savePrefs();
   updateBuzzButton();
 };
 
@@ -142,7 +209,11 @@ nameInput.onkeypress = function(e) {
 };
 
 // Mise à jour du bouton quand le nom change
-nameInput.oninput = updateBuzzButton;
+nameInput.oninput = function() {
+  nameInput.style.borderColor = '';
+  savePrefs();
+  updateBuzzButton();
+};
 
 // Mise à jour des équipes lors de la connexion
 socket.on('connect', () => {
